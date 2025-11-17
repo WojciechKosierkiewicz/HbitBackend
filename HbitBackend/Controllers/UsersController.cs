@@ -73,7 +73,8 @@ public class UsersController : ControllerBase
             UserName = dto.UserName!,
             Name = dto.Name!,
             Surname = dto.Surname!,
-            Email = dto.Email!
+            Email = dto.Email!,
+            DateOfBirth = dto.DateOfBirth!
         };
 
         _db.Users.Add(newUser);

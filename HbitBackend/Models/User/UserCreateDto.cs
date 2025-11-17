@@ -18,4 +18,7 @@ public class UserCreateDto
 
     [Required]
     public string? Password { get; set; }
+    
+    [Required]
+    public DateTimeOffset? DateOfBirth{ get; set; }
 }

@@ -13,5 +13,9 @@ public class User : IdentityUser<int>
     [MaxLength(100)]
     public string Surname { get; set; } = null!;
     
+    public DateTimeOffset? DateOfBirth { get; set; }
+    
     public ICollection<Activity.Activity> Activities { get; set; } = new List<Activity.Activity>();
+
+    public Models.HeartRateZones.HeartRateZones? HeartRateZones { get; set; }
 }

@@ -5,6 +5,7 @@ using HbitBackend.Models.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HbitBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // add DbContext to services
 builder.Services.AddDbContext<HbitBackend.Data.PgDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Register services
+builder.Services.AddScoped<IHeartRateZonesService, HeartRateZonesService>();
 
 // Add Identity
 builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
