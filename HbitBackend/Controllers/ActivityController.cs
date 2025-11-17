@@ -13,7 +13,7 @@ namespace HbitBackend.Controllers;
 public class ActivityController : ControllerBase
 {
     private readonly PgDbContext _db;
-
+    
     public ActivityController(PgDbContext db)
     {
         _db = db;
@@ -23,8 +23,7 @@ public class ActivityController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetAll()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        if (!HbitBackend.Utils.AuthHelpers.TryGetUserId(User, out var userId))
             return Unauthorized();
 
         var activities = await _db.Activities.Where(a => a.UserId == userId).ToListAsync();
@@ -32,10 +31,18 @@ public class ActivityController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<IActionResult> GetById(int id)
     {
+        if (!HbitBackend.Utils.AuthHelpers.TryGetUserId(User, out var userId))
+            return Unauthorized();
+        
         var activity = await _db.Activities.FindAsync(id);
         if (activity == null) return NotFound();
+        
+        if (activity?.UserId != userId)
+            return Unauthorized();
+        
         return Ok(activity);
     }
 
@@ -51,8 +58,7 @@ public class ActivityController : ControllerBase
         if (dto.Date == null)
             return BadRequest(new { field = "Date", message = "Date is required." });
 
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        if (!HbitBackend.Utils.AuthHelpers.TryGetUserId(User, out var userId))
             return Unauthorized();
 
         var activityType = dto.ActivityType.Value;
