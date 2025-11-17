@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using HbitBackend.Models.Activity;
+using HbitBackend.Models.HeartRateSample;
 using HbitBackend.Models.User;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
     }
 
     public DbSet<Activity> Activities { get; set; } = null!;
+    public DbSet<HeartRateSample> HeartRateSamples { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,5 +34,15 @@ public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
             .WithMany(u => u.Activities)
             .HasForeignKey(a => a.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Relacja 1 (Activity) -> * (HeartRateSample)
+        modelBuilder.Entity<HeartRateSample>()
+            .HasOne(h => h.Activity)
+            .WithMany(a => a.HeartRateSamples)
+            .HasForeignKey(h => h.ActivityId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<HeartRateSample>()
+            .HasIndex(h => new { h.ActivityId, h.Timestamp });
     }
 }

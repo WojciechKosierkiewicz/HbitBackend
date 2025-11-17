@@ -15,4 +15,7 @@ public class Activity
     // Klucz obcy do User.Id (int)
     public int UserId { get; set; }
     public User.User User { get; set; } = null!;
+
+    // Nawigacyjna kolekcja próbek tętna powiązana z tą aktywnością
+    public List<HbitBackend.Models.HeartRateSample.HeartRateSample> HeartRateSamples { get; set; } = new();
 }
