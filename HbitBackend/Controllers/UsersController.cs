@@ -1,5 +1,6 @@
 ﻿using HbitBackend.Data;
 using HbitBackend.Models;
+using HbitBackend.Models.User;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -10,9 +11,9 @@ namespace HbitBackend.Controllers;
 [Route("[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly PGDbContext _db;
+    private readonly PgDbContext _db;
 
-    public UsersController(PGDbContext db)
+    public UsersController(PgDbContext db)
     {
         _db = db;
     }
@@ -87,7 +88,7 @@ public class UsersController : ControllerBase
         }
 
         // Return created with id in body
-        return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, new { id = newUser.Id }); 
+        return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, new { id = newUser.Id });
     }
     
 }

@@ -1,12 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace HbitBackend.Models;
+namespace HbitBackend.Models.Activity;
 
 public class ActivityCreateDto
 {
-    [Required]
-    public int? UserId { get; set; }
-    
     [Required]
     public ActivityType? ActivityType { get; set; }
     

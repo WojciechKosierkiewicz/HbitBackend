@@ -1,12 +1,18 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using HbitBackend.Models;
+using HbitBackend.Models.Activity;
+using HbitBackend.Models.User;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace HbitBackend.Data;
 
-public class PGDbContext(DbContextOptions<PGDbContext> options) : DbContext(options)
+public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
 {
+    public PgDbContext(DbContextOptions<PgDbContext> options) : base(options)
+    {
+    }
+
     public DbSet<Activity> Activities { get; set; } = null!;
-    public DbSet<User> Users { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

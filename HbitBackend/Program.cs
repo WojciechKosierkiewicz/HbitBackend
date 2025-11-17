@@ -1,5 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Identity;
+using HbitBackend.Models.User;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,8 +12,49 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // add DbContext to services
-builder.Services.AddDbContext<HbitBackend.Data.PGDbContext>(options =>
+builder.Services.AddDbContext<HbitBackend.Data.PgDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Add Identity
+builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireDigit = false;
+        options.Password.RequiredLength = 6;
+    })
+    .AddEntityFrameworkStores<HbitBackend.Data.PgDbContext>()
+    .AddDefaultTokenProviders();
+
+// Configure JWT
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSection["Key"];
+var jwtIssuer = jwtSection["Issuer"];
+var jwtAudience = jwtSection["Audience"];
+
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = key,
+        ValidateLifetime = true
+    };
+});
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -27,6 +73,7 @@ if (app.Environment.IsDevelopment())
 
 // app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

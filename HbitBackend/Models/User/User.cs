@@ -1,19 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
 
-namespace HbitBackend.Models;
+namespace HbitBackend.Models.User;
 
-public class User
+public class User : IdentityUser<int>
 {
-    public int Id { get; set; }
-
-    [Required]
-    [MaxLength(100)]
-    public string UserName { get; set; } = null!;
-
-    [Required]
-    [MaxLength(256)]
-    [EmailAddress]
-    public string Email { get; set; } = null!;
+    // IdentityUser (string key) zawiera Id (string), UserName i Email
 
     [MaxLength(100)]
     public string Name { get; set; } = null!;
@@ -21,5 +13,5 @@ public class User
     [MaxLength(100)]
     public string Surname { get; set; } = null!;
     
-    public ICollection<Activity> Activities { get; set; } = new List<Activity>();
+    public ICollection<Activity.Activity> Activities { get; set; } = new List<Activity.Activity>();
 }

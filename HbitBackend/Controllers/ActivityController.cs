@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using HbitBackend.Data;
 using HbitBackend.Models;
+using HbitBackend.Models.Activity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace HbitBackend.Controllers;
 
@@ -9,17 +12,22 @@ namespace HbitBackend.Controllers;
 [Route("[controller]")]
 public class ActivityController : ControllerBase
 {
-    private readonly PGDbContext _db;
+    private readonly PgDbContext _db;
 
-    public ActivityController(PGDbContext db)
+    public ActivityController(PgDbContext db)
     {
         _db = db;
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetAll()
     {
-        var activities = await _db.Activities.ToListAsync();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var activities = await _db.Activities.Where(a => a.UserId == userId).ToListAsync();
         return Ok(activities);
     }
 
@@ -32,23 +40,20 @@ public class ActivityController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Create([FromBody] ActivityCreateDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-
-        if (dto.UserId == null)
-            return BadRequest(new { field = "UserId", message = "UserId is required." });
-
-        var userExists = await _db.Users.AnyAsync(u => u.Id == dto.UserId);
         
-        if (!userExists)
-            return NotFound(new { field = "UserId", message = "User with given id was not found." });
-
         if (dto.ActivityType == null)
             return BadRequest(new { field = "ActivityType", message = "ActivityType is required." });
 
         if (dto.Date == null)
             return BadRequest(new { field = "Date", message = "Date is required." });
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
 
         var activityType = dto.ActivityType.Value;
         var date = dto.Date.Value;
@@ -58,7 +63,7 @@ public class ActivityController : ControllerBase
             Name = dto.Name,
             Date = date,
             Type = activityType,
-            UserId = dto.UserId.Value 
+            UserId = userId
         };
 
         _db.Activities.Add(newActivity);

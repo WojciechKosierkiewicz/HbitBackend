@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace HbitBackend.Models;
+namespace HbitBackend.Models.User;
 
 public class UserCreateDto
 {
@@ -15,4 +15,7 @@ public class UserCreateDto
     
     [Required]
     public string? Email { get; set;}
+
+    [Required]
+    public string? Password { get; set; }
 }

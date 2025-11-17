@@ -1,4 +1,4 @@
-﻿namespace HbitBackend.Models;
+﻿namespace HbitBackend.Models.Activity;
 
 public enum ActivityType
 {
