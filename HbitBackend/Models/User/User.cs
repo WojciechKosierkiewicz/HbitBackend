@@ -18,4 +18,6 @@ public class User : IdentityUser<int>
     public ICollection<Activity.Activity> Activities { get; set; } = new List<Activity.Activity>();
 
     public Models.HeartRateZones.HeartRateZones? HeartRateZones { get; set; }
+
+    public ICollection<ActivityGoal.ActivityGoalParticipant> ActivityGoals { get; set; } = new List<ActivityGoal.ActivityGoalParticipant>();
 }

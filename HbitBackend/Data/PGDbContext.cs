@@ -3,6 +3,7 @@ using HbitBackend.Models.Activity;
 using HbitBackend.Models.HeartRateSample;
 using HbitBackend.Models.User;
 using HbitBackend.Models.HeartRateZones;
+using HbitBackend.Models.ActivityGoal;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
@@ -17,6 +18,8 @@ public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
     public DbSet<Activity> Activities { get; set; } = null!;
     public DbSet<HeartRateSample> HeartRateSamples { get; set; } = null!;
     public DbSet<HeartRateZones> HeartRateZones { get; set; } = null!;
+    public DbSet<ActivityGoal> ActivityGoals { get; set; } = null!;
+    public DbSet<ActivityGoalParticipant> ActivityGoalParticipants { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,5 +59,21 @@ public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
         modelBuilder.Entity<HeartRateZones>()
             .HasIndex(h => h.UserId)
             .IsUnique();
+
+        // ActivityGoalParticipant composite key and relationships
+        modelBuilder.Entity<ActivityGoalParticipant>()
+            .HasKey(p => new { p.ActivityGoalId, p.UserId });
+
+        modelBuilder.Entity<ActivityGoalParticipant>()
+            .HasOne(p => p.ActivityGoal)
+            .WithMany(g => g.Participants)
+            .HasForeignKey(p => p.ActivityGoalId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ActivityGoalParticipant>()
+            .HasOne(p => p.User)
+            .WithMany(u => u.ActivityGoals)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
