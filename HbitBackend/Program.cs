@@ -9,6 +9,10 @@ using HbitBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Optionally make the app listen on all network interfaces so it can be reached from other machines on your LAN.
+// It's bound to port 5000 for HTTP here. If you want HTTPS you'll need a certificate and additional config.
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
+
 // get DbConnection String
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -18,6 +22,7 @@ builder.Services.AddDbContext<HbitBackend.Data.PgDbContext>(options =>
 
 // Register services
 builder.Services.AddScoped<IHeartRateZonesService, HeartRateZonesService>();
+builder.Services.AddScoped<IActivityPointsService, ActivityPointsService>();
 
 // Add Identity
 builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
@@ -60,6 +65,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Add a permissive CORS policy so other machines (or browsers on other hosts) can access the API during development.
+// In production, restrict origins to the specific host(s) you need.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalNetwork", policy =>
+    {
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowAnyOrigin(); // consider restricting to a specific origin or IP in production
+    });
+});
+
 // Add services to the container.
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -79,6 +96,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Enable CORS for requests
+app.UseCors("AllowLocalNetwork");
 
 app.MapControllers();
 

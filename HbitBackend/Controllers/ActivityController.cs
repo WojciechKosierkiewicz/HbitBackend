@@ -64,6 +64,10 @@ public class ActivityController : ControllerBase
         var activityType = dto.ActivityType.Value;
         var date = dto.Date.Value;
 
+        var exists = await _db.Activities.AnyAsync(a => a.UserId == userId && a.Type == activityType && a.Date == date);
+        if (exists)
+            return Conflict(new { message = "An activity with the same type and date already exists." });
+
         var newActivity = new Activity
         {
             Name = dto.Name,
