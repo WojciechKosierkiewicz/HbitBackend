@@ -4,8 +4,6 @@ using HbitBackend.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using HbitBackend.Models.HeartRateZones;
 using HbitBackend.Services;
 
 namespace HbitBackend.Controllers;
@@ -26,23 +24,23 @@ public class HeartRateController : ControllerBase
 
     [HttpGet("{id}")]
     [Authorize]
-    public async Task<ActionResult<IEnumerable<HeartRateSampleData>>> GetHeartRateSample(int id)
+    public async Task<IActionResult> GetHeartRateSample(int id)
     {
         if (!AuthHelpers.TryGetUserId(User, out var userId))
             return Unauthorized();
 
         var activity = await _db.Activities.FindAsync(id);
-        if (activity == null) return NotFound();
-        if (activity.UserId != userId) return Forbid();
+        if (activity == null)
+            return NotFound();
+        if (activity.UserId != userId)
+            return Forbid();
 
         var samples = await _db.HeartRateSamples
             .Where(h => h.ActivityId == id)
             .OrderBy(h => h.Timestamp)
-            .Select(h => new HeartRateSampleData
-            {
-                Id = h.Id,
-                Timestamp = h.Timestamp,
-                Bpm = h.Bpm
+            .Select(h => new {
+                Time = h.Timestamp,
+                Value = h.Bpm
             })
             .ToListAsync();
 
@@ -52,19 +50,24 @@ public class HeartRateController : ControllerBase
     // POST endpoint przyjmujący tablicę próbek tętna dla danej aktywności
     [HttpPost("{id}")]
     [Authorize]
-    public async Task<IActionResult> PostHeartRateSamples(int id, [FromBody] IEnumerable<HeartRateSampleCreateDto> samplesDto)
+    public async Task<IActionResult> PostHeartRateSamples(int id, [FromBody] IEnumerable<HeartRateSampleCreateDto>? samplesDto)
     {
-        if (samplesDto == null || !samplesDto.Any())
+        var samplesList = samplesDto?.ToList();
+
+        if (samplesList == null || !samplesList.Any())
             return BadRequest(new { message = "No samples provided." });
 
         if (!AuthHelpers.TryGetUserId(User, out var userId))
             return Unauthorized();
 
         var activity = await _db.Activities.FindAsync(id);
-        if (activity == null) return NotFound();
-        if (activity.UserId != userId) return Forbid();
+        if (activity == null)
+            return NotFound();
 
-        var entities = samplesDto.Select(s => new HeartRateSample
+        if (activity.UserId != userId)
+            return Forbid();
+
+        var entities = samplesList.Select(s => new HeartRateSample
         {
             ActivityId = id,
             Timestamp = s.Timestamp,
@@ -74,14 +77,12 @@ public class HeartRateController : ControllerBase
         _db.HeartRateSamples.AddRange(entities);
         await _db.SaveChangesAsync();
 
-        var result = entities.Select(e => new HeartRateSampleData
-        {
-            Id = e.Id,
-            Timestamp = e.Timestamp,
-            Bpm = e.Bpm
+        var result = entities.Select(e => new {
+            Time = e.Timestamp,
+            Value = e.Bpm
         }).ToList();
 
-        return CreatedAtAction(nameof(GetHeartRateSample), new { id = id }, result);
+        return CreatedAtAction(nameof(GetHeartRateSample), new { id }, result);
     }
 
     [Authorize]
@@ -91,23 +92,23 @@ public class HeartRateController : ControllerBase
         if (!AuthHelpers.TryGetUserId(User, out var userId))
             return Unauthorized();
 
-        // Ensure zones are fresh - service may update DB
-        await _zonesService.EnsureFreshMaxHeartRateAsync(userId);
+        // Try to ensure DB entry is fresh (may update MaxHeartRate)
+        var zonesEntity = await _zonesService.EnsureFreshMaxHeartRateAsync(userId);
 
-        var zones = await _db.HeartRateZones.Where(h => h.UserId == userId).FirstOrDefaultAsync();
-        if (zones == null) return NotFound();
-        
-        var response = new GetHeartRateZonesDto 
+        int? maxHr = zonesEntity?.MaxHeartRate;
+        if (!maxHr.HasValue)
         {
-            RestingHeartRate = zones.RestingHeartRate,
-            MaxHeartRate = zones.MaxHeartRate,
-            Zone1LowerLimit = zones.GetZoneMinBpm(1),
-            Zone2LowerLimit =  zones.GetZoneMinBpm(2),
-            Zone3LowerLimit =  zones.GetZoneMinBpm(3),
-            Zone4LowerLimit =  zones.GetZoneMinBpm(4),
-            Zone5LowerLimit =  zones.GetZoneMinBpm(5)
-        };
+            // fallback: compute directly from past year's samples (may use age-based fallback inside)
+            maxHr = await _zonesService.ComputeMaxHeartRatePastYearAsync(userId);
+        }
 
-        return Ok(response);
+        if (!maxHr.HasValue)
+            return NotFound(new { message = "Unable to determine max heart rate for user." });
+
+        var zonesDto = _zonesService.ComputeZonesFromMax(maxHr.Value);
+        // fill resting heart rate from DB if available
+        zonesDto.RestingHeartRate = zonesEntity?.RestingHeartRate ?? 0;
+
+        return Ok(zonesDto);
     }
 }

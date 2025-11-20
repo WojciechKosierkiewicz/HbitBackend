@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace HbitBackend.Controllers;
 
@@ -14,11 +15,13 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(UserManager<User> userManager, IConfiguration configuration)
+    public AuthController(UserManager<User> userManager, IConfiguration configuration, ILogger<AuthController> logger)
     {
         _userManager = userManager;
         _configuration = configuration;
+        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -37,14 +40,26 @@ public class AuthController : ControllerBase
             UserName = dto.UserName!,
             Email = dto.Email!,
             Name = dto.Name ?? string.Empty,
-            Surname = dto.Surname ?? string.Empty
+            Surname = dto.Surname ?? string.Empty,
+            DateOfBirth = dto.DateOfBirth ?? default
         };
 
         var result = await _userManager.CreateAsync(user, dto.Password ?? "password");
         if (!result.Succeeded)
         {
+            _logger.LogWarning("Failed to create account for userName={UserName}; errors={Errors}", dto.UserName, result.Errors);
             return BadRequest(result.Errors);
         }
+
+        // Log created account data (do NOT log password)
+        _logger.LogInformation("Account created: {@Account}", new {
+            user.Id,
+            user.UserName,
+            user.Email,
+            user.Name,
+            user.Surname,
+            user.DateOfBirth
+        });
 
         return CreatedAtAction(null, new { id = user.Id });
     }
@@ -60,6 +75,27 @@ public class AuthController : ControllerBase
 
         var token = GenerateJwtToken(user);
         return Ok(token);
+    }
+
+    [HttpDelete("me")]
+    [Authorize]
+    public async Task<IActionResult> DeleteMyAccount()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return NotFound();
+
+        // Capture data to log before deletion
+        var userData = new { user.Id, user.UserName, user.Email, user.Name, user.Surname };
+
+        var result = await _userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning("Failed to delete account for userId={UserId}; errors={Errors}", user.Id, result.Errors);
+            return BadRequest(result.Errors);
+        }
+
+        _logger.LogInformation("Account removed: {@Account}", userData);
+        return NoContent();
     }
 
     private object GenerateJwtToken(User user)

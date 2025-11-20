@@ -14,7 +14,7 @@ public class ActivityPointsService : IActivityPointsService
     {
         _db = db;
     }
-    
+
     private async Task<IEnumerable<Activity>> FindSimilarActivities(int userId, Activity activity,DateTimeOffset timeWindowStart)
     {
         var activityType = activity.Type;
@@ -25,7 +25,7 @@ public class ActivityPointsService : IActivityPointsService
                         a.Date >= timeWindowStart)
             .OrderByDescending(a => a.Date)
             .ToListAsync();
-        
+
         return similarActivity;
     }
 
@@ -33,7 +33,7 @@ public class ActivityPointsService : IActivityPointsService
     {
         var activity = await _db.Activities.Where(a => a.UserId == userId && a.Id == activityId).FirstAsync();
         var timeWindowStart = activity.Date.AddDays(-30);
-        
+
         var similarActivities = await FindSimilarActivities(userId, activity, timeWindowStart);
         while (timeWindowStart > activity.Date.AddYears(-1) && similarActivities.Count() < 5)
         {
@@ -43,7 +43,7 @@ public class ActivityPointsService : IActivityPointsService
 
         return 0;
     }
-    
+
     public async Task<int> CalculateBonusPointsFromBpm(int userId, int activityId, int windowMinutes = 15)
     {
         if (windowMinutes < 0) windowMinutes = 15;
@@ -68,7 +68,7 @@ public class ActivityPointsService : IActivityPointsService
 
 
     public async Task<int> GetAtivityPoints(int userId, int activityId, int activityGoalId)
-    
+
     {
         // if there is already a record for this activity and goal return it
         var existingRecord = await _db.ActivityGoalPoints
