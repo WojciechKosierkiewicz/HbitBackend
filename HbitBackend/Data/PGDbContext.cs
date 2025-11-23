@@ -5,6 +5,7 @@ using HbitBackend.Models.User;
 using HbitBackend.Models.HeartRateZones;
 using HbitBackend.Models.ActivityGoal;
 using HbitBackend.Models.ActivityGoalPoints;
+using HbitBackend.Models.Friend;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
@@ -22,6 +23,13 @@ public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
     public DbSet<ActivityGoal> ActivityGoals { get; set; } = null!;
     public DbSet<ActivityGoalParticipant> ActivityGoalParticipants { get; set; } = null!;
     public DbSet<ActivityGoalPoints> ActivityGoalPoints { get; set; } = null!;
+
+    // Friends
+    public DbSet<Friend> Friends { get; set; } = null!;
+    public DbSet<FriendRequest> FriendRequests { get; set; } = null!;
+
+    // Activity Goal Invites
+    public DbSet<HbitBackend.Models.ActivityGoal.ActivityGoalInvite> ActivityGoalInvites { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -88,6 +96,54 @@ public class PgDbContext : IdentityDbContext<User, IdentityRole<int>, int>
             .HasOne(p => p.ActivityGoal)
             .WithMany()
             .HasForeignKey(p => p.ActivityGoalId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Friend configuration
+        modelBuilder.Entity<Friend>()
+            .HasKey(f => new { f.UserAId, f.UserBId });
+
+        modelBuilder.Entity<Friend>()
+            .HasOne(f => f.UserA)
+            .WithMany()
+            .HasForeignKey(f => f.UserAId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Friend>()
+            .HasOne(f => f.UserB)
+            .WithMany()
+            .HasForeignKey(f => f.UserBId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // FriendRequest configuration
+        modelBuilder.Entity<FriendRequest>()
+            .HasOne(fr => fr.FromUser)
+            .WithMany()
+            .HasForeignKey(fr => fr.FromUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FriendRequest>()
+            .HasOne(fr => fr.ToUser)
+            .WithMany()
+            .HasForeignKey(fr => fr.ToUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ActivityGoalInvite configuration
+        modelBuilder.Entity<HbitBackend.Models.ActivityGoal.ActivityGoalInvite>()
+            .HasOne(i => i.FromUser)
+            .WithMany()
+            .HasForeignKey(i => i.FromUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<HbitBackend.Models.ActivityGoal.ActivityGoalInvite>()
+            .HasOne(i => i.ToUser)
+            .WithMany()
+            .HasForeignKey(i => i.ToUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<HbitBackend.Models.ActivityGoal.ActivityGoalInvite>()
+            .HasOne(i => i.ActivityGoal)
+            .WithMany()
+            .HasForeignKey(i => i.ActivityGoalId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

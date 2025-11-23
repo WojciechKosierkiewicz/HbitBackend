@@ -81,4 +81,36 @@ public class ActivityController : ControllerBase
         
         return CreatedAtAction(nameof(GetById), new { id = newActivity.Id }, newActivity); 
     }
+
+    [HttpGet("friends")]
+    [Authorize]
+    public async Task<IActionResult> GetFriendsActivities([FromQuery] int days = 30)
+    {
+        if (!HbitBackend.Utils.AuthHelpers.TryGetUserId(User, out var userId))
+            return Unauthorized();
+
+        var since = DateTimeOffset.UtcNow.AddDays(-days);
+
+        var friendIds = await _db.Friends
+            .Where(f => f.UserAId == userId || f.UserBId == userId)
+            .Select(f => f.UserAId == userId ? f.UserBId : f.UserAId)
+            .ToListAsync();
+
+        if (friendIds == null || !friendIds.Any())
+            return Ok(new List<object>());
+
+        var activities = await _db.Activities
+            .Where(a => friendIds.Contains(a.UserId) && a.Date >= since)
+            .OrderByDescending(a => a.Date)
+            .Select(a => new {
+                a.Id,
+                a.Name,
+                a.Date,
+                a.Type,
+                a.UserId
+            })
+            .ToListAsync();
+
+        return Ok(activities);
+    }
 }

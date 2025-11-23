@@ -18,9 +18,20 @@ public class UsersController : ControllerBase
     }
     
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? q)
     {
-        var users = await _db.Users
+        // start query
+        var usersQuery = _db.Users.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            // use ILike for case-insensitive, fuzzy (contains) search on username
+            var pattern = $"%{q}%";
+            usersQuery = usersQuery.Where(u => EF.Functions.ILike(u.UserName!, pattern));
+        }
+
+        var users = await usersQuery
+            .AsNoTracking()
             .Select(u => new UserGetDto
             {
                 Id = u.Id,
