@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HbitBackend.Services;
+using HbitBackend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +86,26 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Run DB seeder once at startup
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var seeder = new HbitBackend.Data.DbSeeder(services.GetRequiredService<HbitBackend.Data.PgDbContext>(), services.GetRequiredService<UserManager<HbitBackend.Models.User.User>>());
+        await seeder.SeedIfEmptyAsync();
+        // normalize existing activity dates to UTC kind to avoid timestamptz errors when comparing
+        await seeder.NormalizeActivityDatesAsync();
+        // ensure all goals accept only 2 random activity types (updates existing goals too)
+        await seeder.UpdateGoalsToTwoRandomTypesAsync();
+    }
+    catch (Exception ex)
+    {
+        // Log and continue - if seeding fails it should not crash the app startup for dev environment
+        Console.WriteLine("Database seeding failed: " + ex.Message);
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
